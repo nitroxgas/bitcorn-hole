@@ -31,7 +31,8 @@ There are three main code files in this repository:
    [Frontend Code - Coming Soon](#link-to-frontend-code) | [View Screenshot](https://github.com/dplusplus1024/bitcorn-hole/blob/main/screenshot.png)
 
 2. **Microcontroller Code**: This code runs on each microcontroller, hosting a web server and interfacing with the ToF sensor to detect when a bean bag is present.  
-   [View Microcontroller Code](https://github.com/dplusplus1024/bitcorn-hole/blob/main/src/microcontroller_webserver_with_tof.ino)
+   [View Microcontroller Code](https://github.com/nitroxgas/bitcorn-hole/blob/main/src/microcontroller_webserver_with_tof/microcontroller_webserver_with_tof.ino) 
+   **NEED UPDATE IF MERGED**
 
 5. **API to Pay Sats**: This handles the instant payments to players' Lightning Addresses. You can substitute your own API endpoint, and either run your own LND node or use a custodial API like ZBD.  
    [API Code - Coming Soon](#link-to-api-code)
