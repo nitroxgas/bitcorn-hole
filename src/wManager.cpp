@@ -36,5 +36,4 @@ void init_WifiManager(){
         //if you get here you have connected to the WiFi    
         Serial.println("connected...yeey :)");
     }
-    Serial.println("WIFI Manager finished...");
 }

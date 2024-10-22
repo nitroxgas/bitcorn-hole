@@ -1,18 +1,10 @@
-#ifdef ARDUINO_UNOWIFIR4
+#ifdef ARDUINO_UNOWIFIR4 // If using UNO WiFi R4 change the WiFi lib (better compatibility)
   #include "WiFiS3.h"
 #else
   #include "WiFi.h"
 #endif
 #include <Wire.h>
-#include <SparkFun_VL53L5CX_Library.h>
 #include "wManager.h"
-
-WiFiClient client;
-SparkFun_VL53L5CX mySensor; 
-
-// WiFi credentials - update these!
-/* char ssid[] = "Your network name";
-char pass[] = "Your network password"; */
 
 // If not ESP32-S3 define LED pin.
 #ifndef LED_BUILTIN
@@ -22,14 +14,31 @@ char pass[] = "Your network password"; */
 int led =  LED_BUILTIN; 
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
+WiFiClient client;
 
 
-void printWiFiStatus() {
-  Serial.println("Connected to WiFi!");
-  IPAddress ip = WiFi.localIP();
-  Serial.print("Your API endpoint is: http://");
-  Serial.print(ip);
-  Serial.println("/readSensor");
+// If using VL53L5CX LIDAR
+#ifdef VL53L5CX
+#include <SparkFun_VL53L5CX_Library.h>
+SparkFun_VL53L5CX mySensor; 
+void init_VL53L5CX(){
+// Initialize I2C communication
+  Wire.begin();   // Initialize default I2C bus (Wire) - Used for soldered connections; I am not using this 
+  Wire1.begin();  // Initialize second I2C bus (Wire1) - Needed for Arduino Uno R4 with Qwicc cables
+  
+  // Initialize the VL53L5CX sensor on Wire1 with the default I2C address 0x29
+  if (!mySensor.begin(0x29, Wire1)) { // Use Wire1 for Qwiic connections
+  // Use the following line instead if you're using a soldered connection or a 
+  // microcontroller that unlike the Uno R4 doesn't get confused about Quicc cables lol
+  // if (!mySensor.begin()) {
+    Serial.println("Failed to communicate with VL53L5CX on Wire1. Check wiring.");
+    while (1); // Halt the program if sensor initialization fails
+  }
+
+  Serial.println("VL53L5CX detected on Wire1!");
+  
+  mySensor.setResolution(8 * 8); // Set the sensor resolution to 8x8
+  mySensor.startRanging(); // Start measuring distance
 }
 
 void readSensor(int distances[24]) {
@@ -50,6 +59,22 @@ void readSensor(int distances[24]) {
     }
   }
 }
+#endif
+
+// If using load cells
+#ifdef LOADCELLS
+void readSensor(int distances[24]) {
+
+}
+#endif
+
+void printWiFiStatus() {
+  Serial.println("Connected to WiFi!");
+  IPAddress ip = WiFi.localIP();
+  Serial.print("Your API endpoint is: http://");
+  Serial.print(ip);
+  Serial.println("/readSensor");
+}
 
 void printHeaders() {
   client.println("HTTP/1.1 200 OK");
@@ -66,40 +91,13 @@ void setup() {
   Serial.println("********* Starting Program ********* ");
 
   init_WifiManager();
-
-  // Initialize I2C communication
-  Wire.begin();   // Initialize default I2C bus (Wire) - Used for soldered connections; I am not using this 
-  Wire1.begin();  // Initialize second I2C bus (Wire1) - Needed for Arduino Uno R4 with Qwicc cables
   
-  // Initialize the VL53L5CX sensor on Wire1 with the default I2C address 0x29
-  if (!mySensor.begin(0x29, Wire1)) { // Use Wire1 for Qwiic connections
-  // Use the following line instead if you're using a soldered connection or a 
-  // microcontroller that unlike the Uno R4 doesn't get confused about Quicc cables lol
-  // if (!mySensor.begin()) {
-    Serial.println("Failed to communicate with VL53L5CX on Wire1. Check wiring.");
-    while (1); // Halt the program if sensor initialization fails
-  }
-
-  Serial.println("VL53L5CX detected on Wire1!");
-  
-  mySensor.setResolution(8 * 8); // Set the sensor resolution to 8x8
-  mySensor.startRanging(); // Start measuring distance
+  // Start LIDAR
+  #ifdef VL53L5CX
+    init_VL53L5CX();
+  #endif
 
   pinMode(led, OUTPUT);      
-
- /*   // Check for the WiFi module
-  if (WiFi.status() == WL_NO_MODULE) {
-    Serial.println("Communication with WiFi module failed!");
-    while (true); // Halt the program if WiFi module is not found
-  }
-
-  // Attempt to connect to the WiFi network
-  while (status != WL_CONNECTED) {
-    Serial.print("Connecting to SSID: ");
-    Serial.println(ssid);
-    status = WiFi.begin(ssid, pass);  
-    delay(10000); // Wait 10 seconds for connection
-  } */
 
   // Start the web server on port 80
   server.begin();
@@ -107,15 +105,6 @@ void setup() {
 }
 
 void loop() {
-/*   // Monitor WiFi status changes
-  if (status != WiFi.status()) {
-    status = WiFi.status();
-    if (status == WL_CONNECTED) {
-      Serial.println("Device connected to AP");
-    } else {
-      Serial.println("Device disconnected from AP");
-    }
-  } */
 
   // Listen for incoming clients
   client = server.available(); 
@@ -171,7 +160,7 @@ void loop() {
         if (currentLine.endsWith("GET /readSensor")) {
           printHeaders(); 
           int distances[24];
-          readSensor(distances); 
+          readSensor(distances);
 
           client.print("[");
           for (int i = 0; i < 24; i++) {
