@@ -8,7 +8,7 @@
 
 // If not ESP32-S3 define LED pin.
 #ifndef LED_BUILTIN
-  #define LED_BUILTIN 13;
+  #define LED_BUILTIN 22 //For WeMos Lolin32 Lite
 #endif
 
 int led =  LED_BUILTIN; 
@@ -63,17 +63,86 @@ void readSensor(int distances[24]) {
 
 // If using load cells
 #ifdef LOADCELLS
-void readSensor(int distances[24]) {
+  #include "HX711.h"
+  HX711 myScale;
 
+  uint8_t dataPin = 6;
+  uint8_t clockPin = 7;
+
+void calibrate()
+{
+  Serial.println("\n\nCALIBRATION\n===========");
+  Serial.println("remove all weight from the loadcell");
+  //  flush Serial input
+  while (Serial.available()) Serial.read();
+
+  Serial.println("and press enter\n");
+  while (Serial.available() == 0);
+
+  Serial.println("Determine zero weight offset");
+  myScale.tare(20);  // average 20 measurements.
+  uint32_t offset = myScale.get_offset();
+
+  Serial.print("OFFSET: ");
+  Serial.println(offset);
+  Serial.println();
+
+
+  Serial.println("place a weight on the loadcell");
+  //  flush Serial input
+  while (Serial.available()) Serial.read();
+  Serial.println("enter the weight in (whole) grams and press enter");
+  uint32_t weight = 0;
+  while (Serial.peek() != '\n')
+  {
+    if (Serial.available())
+    {
+      char ch = Serial.read();
+      if (isdigit(ch))
+      {
+        weight *= 10;
+        weight = weight + (ch - '0');
+      }
+    }
+  }
+  Serial.print("WEIGHT: ");
+  Serial.println(weight);
+  myScale.calibrate_scale(weight, 20);
+  float scale = myScale.get_scale();
+  Serial.print("SCALE:  ");
+  Serial.println(scale, 6);
+  Serial.print("\nuse scale.set_offset(");
+  Serial.print(offset);
+  Serial.print("); and scale.set_scale(");
+  Serial.print(scale, 6);
+  Serial.print(");\n");
+  Serial.println("in the setup of your project");
+  Serial.println("\n\n");
+}
+
+void init_loadcells(){
+  myScale.begin(dataPin, clockPin);
+  // Use to calibrate your load cell comment and update the code after.
+  calibrate();
+}
+
+
+
+void readSensor(int distances[24]) {
+  for (int i = 0; i < 24; i++) {
+      distances[i] = myScale.read_average(5); //myScale.get_units(5);
+      Serial.printf("%d:",distances[i]);
+    }
+    Serial.println();
 }
 #endif
 
 void printWiFiStatus() {
-  Serial.println("Connected to WiFi!");
+  // Serial.println("Connected to WiFi!");
   IPAddress ip = WiFi.localIP();
   Serial.print("Your API endpoint is: http://");
   Serial.print(ip);
-  Serial.println("/readSensor");
+  Serial.println("/readSensor");  
 }
 
 void printHeaders() {
@@ -96,7 +165,9 @@ void setup() {
   #ifdef VL53L5CX
     init_VL53L5CX();
   #endif
-
+  #ifdef LOADCELLS
+    void init_loadcells();
+  #endif
   pinMode(led, OUTPUT);      
 
   // Start the web server on port 80
@@ -159,7 +230,7 @@ void loop() {
 
         if (currentLine.endsWith("GET /readSensor")) {
           printHeaders(); 
-          int distances[24];
+          int distances[24] = {0};
           readSensor(distances);
 
           client.print("[");
