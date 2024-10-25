@@ -63,11 +63,14 @@ void readSensor(int distances[24]) {
 
 // If using load cells
 #ifdef LOADCELLS
+  #include "soc/rtc.h"
   #include "HX711.h"
   HX711 myScale;
 
-  uint8_t dataPin = 6;
-  uint8_t clockPin = 7;
+  uint8_t dataPin = 16;
+  uint8_t clockPin = 4;
+
+  uint8_t bagWeight = 200;
 
 void calibrate()
 {
@@ -120,20 +123,48 @@ void calibrate()
   Serial.println("\n\n");
 }
 
-void init_loadcells(){
-  myScale.begin(dataPin, clockPin);
-  // Use to calibrate your load cell comment and update the code after.
-  calibrate();
+void calibrate2(){
+  myScale.set_scale();
+  myScale.tare();
+  while (1){
+    if (myScale.is_ready()) {
+    Serial.println(myScale.get_units(10));
+    delay(200);
+    }
+  }
 }
 
+void init_loadcells(){
+  Serial.println("Starting Load");  
 
+  // Slow down ESP to improve accuracy.
+ /*  rtc_cpu_freq_config_t config;
+  rtc_clk_cpu_freq_get_config(&config);
+  rtc_clk_cpu_freq_to_config(RTC_CPU_FREQ_80M, &config);
+  rtc_clk_cpu_freq_set_config_fast(&config); */
+
+  myScale.begin(dataPin, clockPin, true);
+  //myScale.set_offset(531641); 
+  //myScale.set_scale(-21.114185);
+  
+  myScale.set_offset(532163);
+  myScale.set_scale(-22.671795);
+  myScale.tare(20);
+  
+  // Use to calibrate your load cell comment and update the code after.
+   //calibrate();
+}
 
 void readSensor(int distances[24]) {
-  for (int i = 0; i < 24; i++) {
-      distances[i] = myScale.read_average(5); //myScale.get_units(5);
-      Serial.printf("%d:",distances[i]);
-    }
-    Serial.println();
+  int bags = (int)(myScale.get_units(15) / bagWeight);  
+  std::fill(distances, distances+24, bags);
+  // If C++ < 11
+  /*
+   distances[0] = bags;
+   for (int i = 1; i < 24; i++) {
+      distances[i] = distances[0];
+      Serial.printf("%d:", distances[i]);
+    } */       
 }
 #endif
 
@@ -158,17 +189,20 @@ void setup() {
     ; // Wait for serial port to connect (only needed for native USB)
   }
   Serial.println("********* Starting Program ********* ");
-
-  init_WifiManager();
   
   // Start LIDAR
   #ifdef VL53L5CX
     init_VL53L5CX();
   #endif
+
   #ifdef LOADCELLS
-    void init_loadcells();
+    Serial.println("Starting Load cells");
+    init_loadcells();
   #endif
+  
   pinMode(led, OUTPUT);      
+  
+  init_WifiManager();
 
   // Start the web server on port 80
   server.begin();
@@ -229,6 +263,7 @@ void loop() {
         }
 
         if (currentLine.endsWith("GET /readSensor")) {
+          Serial.println("Received request.");
           printHeaders(); 
           int distances[24] = {0};
           readSensor(distances);
