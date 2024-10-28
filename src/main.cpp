@@ -15,7 +15,127 @@ int led =  LED_BUILTIN;
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 WiFiClient client;
+#if defined(LOADCELLS) || defined(LED_SCORE_BAR)
+  uint8_t bags = 0;
+  bool statusSent = false;
+  uint8_t bagsSent = 0;
+  uint8_t assumedBagsSent = 0;
+  unsigned long currentMillis = 0;
+#endif
 
+#ifdef LED_SCORE_BAR
+  bool LED_Status = false;  
+  #include <Adafruit_NeoPixel.h>
+  // LED Data pin from LED_SCORE_BAR platormio.ini definition
+  Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_SIZE, LED_SCORE_BAR, NEO_GRB + NEO_KHZ800);  
+  uint32_t teamColor = 0;
+
+  void powerOffLeds()
+  {
+    strip.clear();    
+    strip.show();
+  }
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+
+  //Theatre-style crawling lights.
+  void theaterChase(uint32_t c, uint8_t wait) {
+    strip.setBrightness(100);
+    for (int j=0; j<10; j++) {  //do 10 cycles of chasing
+      for (int q=0; q < 3; q++) {
+        for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
+          if (c>0) { 
+            strip.setPixelColor(i+q, c); 
+          } else {
+            strip.setPixelColor(i+q, Wheel(random(0,255)));    //turn every third pixel on
+          }
+        }
+        strip.show();
+
+        delay(wait);
+
+        for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
+          strip.setPixelColor(i+q, 0);        //turn every third pixel off
+        }
+      }
+    }
+    powerOffLeds();
+  }
+  
+  // Fill the dots one after the other with a color
+  void colorWipe(uint32_t c, uint8_t wait) {
+    for(uint16_t i=1; i<strip.numPixels()-1; i++) {
+      strip.setPixelColor(i, c);
+      strip.show();
+      delay(wait);
+    }
+  }
+
+  void setLEDScore(int score){
+    
+    if (score > bagsSent)
+    {
+      if (assumedBagsSent <= 5) {
+        theaterChase(strip.Color(50, 255, 0),20);  
+        assumedBagsSent++; 
+      }
+    } else {
+        assumedBagsSent = 0;
+      }
+    
+    if (score >= 4) {
+      theaterChase(teamColor, 40);   
+      //colorWipe(teamColor, 30); // TeamColor
+    }
+    // Restart game; bag compartment is empty
+    if ((score == 0) && (bagsSent>0)) {
+      bagsSent = 0;
+      theaterChase(strip.Color(50, 255, 0),30);                
+    }
+    
+    // Map bags to the LED_SIZE (how many LEDs per bag)
+    int scoreLED = (int)map(score,0,4,1,LED_SIZE-1);
+        
+      powerOffLeds();
+      for (size_t i = 1; i < scoreLED; i++)
+      {
+        strip.setPixelColor(i, teamColor); // Blue Score LEDs
+      }          
+      if (LED_Status) {
+        strip.setPixelColor(0 , strip.Color(0, 255, 0));
+        strip.setPixelColor(LED_SIZE-1, strip.Color(0, 255, 0));
+      } else {
+        strip.setPixelColor(0 , strip.Color(255, 0, 0));
+        strip.setPixelColor(LED_SIZE-1, strip.Color(255, 0, 0));
+      }
+    strip.show(); 
+  }
+
+  void  init_LEDS(){
+      strip.begin();
+      strip.show();
+      theaterChase(0,30);
+      LED_Status = true;
+      if (LED_TEAM_COLOR) {
+        teamColor=strip.Color(255, 0, 0);
+      } else {
+        teamColor=strip.Color(0, 0, 255);
+      }
+    }
+#endif
 
 // If using VL53L5CX LIDAR
 #ifdef VL53L5CX
@@ -63,14 +183,15 @@ void readSensor(int distances[24]) {
 
 // If using load cells
 #ifdef LOADCELLS
-  #include "soc/rtc.h"
+  // Uncomment to slow down the ESP
+  // #include "soc/rtc.h"
   #include "HX711.h"
   HX711 myScale;
 
   uint8_t dataPin = 16;
   uint8_t clockPin = 4;
 
-  uint8_t bagWeight = 200;
+  // uint8_t bagWeight = 200;
 
 void calibrate()
 {
@@ -119,23 +240,12 @@ void calibrate()
   Serial.print("); and scale.set_scale(");
   Serial.print(scale, 6);
   Serial.print(");\n");
-  Serial.println("in the setup of your project");
+  Serial.println("in the init_loadcells() of your project");
   Serial.println("\n\n");
 }
 
-void calibrate2(){
-  myScale.set_scale();
-  myScale.tare();
-  while (1){
-    if (myScale.is_ready()) {
-    Serial.println(myScale.get_units(10));
-    delay(200);
-    }
-  }
-}
-
 void init_loadcells(){
-  Serial.println("Starting Load");  
+  Serial.println("Starting Load cells.");  
 
   // Slow down ESP to improve accuracy.
  /*  rtc_cpu_freq_config_t config;
@@ -144,27 +254,21 @@ void init_loadcells(){
   rtc_clk_cpu_freq_set_config_fast(&config); */
 
   myScale.begin(dataPin, clockPin, true);
-  //myScale.set_offset(531641); 
-  //myScale.set_scale(-21.114185);
-  
-  myScale.set_offset(532163);
-  myScale.set_scale(-22.671795);
-  myScale.tare(20);
-  
+   
   // Use to calibrate your load cell comment and update the code after.
-   //calibrate();
+  //calibrate();    
+  myScale.set_offset(528485); // Comment to calibrate and update after
+  myScale.set_scale(-21.710976); // Comment to calibrate and update after  
+  myScale.tare(20);
 }
 
-void readSensor(int distances[24]) {
-  int bags = (int)(myScale.get_units(15) / bagWeight);  
-  std::fill(distances, distances+24, bags);
-  // If C++ < 11
-  /*
-   distances[0] = bags;
-   for (int i = 1; i < 24; i++) {
-      distances[i] = distances[0];
-      Serial.printf("%d:", distances[i]);
-    } */       
+void readSensor(int distances[24]) {     
+  if (bags == bagsSent) {
+    std::fill(distances, distances+24, 0);    
+  } else {
+    std::fill(distances, distances+24, bags);
+    bagsSent = bags;
+  }  
 }
 #endif
 
@@ -195,10 +299,9 @@ void setup() {
     init_VL53L5CX();
   #endif
 
-  #ifdef LOADCELLS
-    Serial.println("Starting Load cells");
+  #ifdef LOADCELLS    
     init_loadcells();
-  #endif
+  #endif 
   
   pinMode(led, OUTPUT);      
   
@@ -207,6 +310,10 @@ void setup() {
   // Start the web server on port 80
   server.begin();
   printWiFiStatus();
+
+  #ifdef LED_SCORE_BAR
+   init_LEDS();
+  #endif
 }
 
 void loop() {
@@ -214,6 +321,7 @@ void loop() {
   // Listen for incoming clients
   client = server.available(); 
   unsigned long clientConnectedTime = millis();
+  int distances[24] = {0};
 
   if (client) { 
     String currentLine = ""; // Make a String to hold incoming data from the client
@@ -249,23 +357,28 @@ void loop() {
         if (currentLine.endsWith("GET /H")) {
           Serial.println("Received /H request.");
           printHeaders();
-          client.println("{\"status\":\"on\"}");
+          client.println("{\"status\":\"on\"}");          
           digitalWrite(led, HIGH); 
           Serial.println("LED turned on.");
+          #ifdef LED_SCORE_BAR
+            LED_Status = true;
+          #endif
         }
 
         if (currentLine.endsWith("GET /L")) {
           Serial.println("Received /L request.");
           printHeaders();
-          client.println("{\"status\":\"off\"}");
+          client.println("{\"status\":\"off\"}");          
           digitalWrite(led, LOW); 
           Serial.println("LED turned off.");
+          #ifdef LED_SCORE_BAR
+            LED_Status = false;
+          #endif
         }
 
         if (currentLine.endsWith("GET /readSensor")) {
           Serial.println("Received request.");
-          printHeaders(); 
-          int distances[24] = {0};
+          printHeaders();           
           readSensor(distances);
 
           client.print("[");
@@ -281,6 +394,43 @@ void loop() {
       }
     }
     delay(1); // Short delay to ensure data is sent
-    client.stop();
+    client.stop();    
   }
+   #if defined(LOADCELLS) || defined(LED_SCORE_BAR)   
+   if (millis() > currentMillis + 500) {
+    currentMillis = millis();
+    #ifdef LOADCELLS
+      float weightSum = 0.0;
+      for (size_t i = 0; i < 15; i++)
+      {
+        weightSum += myScale.get_units(1);
+        delay(25);
+      }      
+      int weight =(int)(weightSum/15);
+
+      if (weight < -2) {
+        bags = 0;
+        myScale.tare(20);        
+        #ifdef LED_SCORE_BAR    
+          theaterChase(strip.Color(255, 255, 255),10); 
+        #endif
+      } else {
+        int bagsEstimated = (int)((weight / (BAGWEIGHT - TOLERANCE )) + 0.6);
+        // Serial.printf("W:%d Be:%d\n", weight, bagsEstimated);        
+        float bagmin = bagsEstimated * BAGWEIGHT - bagsEstimated * TOLERANCE;
+        float bagmax = bagsEstimated * BAGWEIGHT + bagsEstimated * TOLERANCE;        
+        if (weight >= bagmin && weight <= bagmax) {
+          bags = bagsEstimated;          
+        } else {
+          bags = weight / BAGWEIGHT + 0.5;          
+        }
+        Serial.printf("W:%d(%.2f:%.2f) Bags:%d Bags Sent:%d\n", weight, bagmin, bagmax, bags, bagsSent);
+      }       
+    #endif
+    // Show bar status;
+    #ifdef LED_SCORE_BAR    
+      setLEDScore(bags);      
+    #endif
+  }
+  #endif
 }
