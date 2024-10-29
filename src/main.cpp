@@ -100,12 +100,7 @@ uint32_t Wheel(byte WheelPos) {
       theaterChase(teamColor, 40);   
       //colorWipe(teamColor, 30); // TeamColor
     }
-    // Restart game; bag compartment is empty
-    if ((score == 0) && (bagsSent>0)) {
-      bagsSent = 0;
-      theaterChase(strip.Color(50, 255, 0),30);                
-    }
-    
+        
     // Map bags to the LED_SIZE (how many LEDs per bag)
     int scoreLED = (int)map(score,0,4,1,LED_SIZE-1);
         
@@ -126,14 +121,14 @@ uint32_t Wheel(byte WheelPos) {
 
   void  init_LEDS(){
       strip.begin();
-      strip.show();
-      theaterChase(0,30);
+      strip.show();      
       LED_Status = true;
       if (LED_TEAM_COLOR) {
         teamColor=strip.Color(255, 0, 0);
       } else {
         teamColor=strip.Color(0, 0, 255);
       }
+      theaterChase(teamColor,30);
     }
 #endif
 
@@ -409,11 +404,13 @@ void loop() {
       int weight =(int)(weightSum/15);
 
       if (weight < -2) {
-        bags = 0;
-        myScale.tare(20);        
+        bags = 0;               
+        LED_Status = false;
         #ifdef LED_SCORE_BAR    
-          theaterChase(strip.Color(255, 255, 255),10); 
-        #endif
+         setLEDScore(bags);               
+        #endif 
+        myScale.tare(20);  
+        LED_Status = true;
       } else {
         int bagsEstimated = (int)((weight / (BAGWEIGHT - TOLERANCE )) + 0.6);
         // Serial.printf("W:%d Be:%d\n", weight, bagsEstimated);        
@@ -425,7 +422,18 @@ void loop() {
           bags = weight / BAGWEIGHT + 0.5;          
         }
         Serial.printf("W:%d(%.2f:%.2f) Bags:%d Bags Sent:%d\n", weight, bagmin, bagmax, bags, bagsSent);
-      }       
+        
+        // Restart game; bag compartment is empty
+        if ((bags == 0) && (bagsSent>0)) {
+          bagsSent = 0;
+          LED_Status = false;
+          #ifdef LED_SCORE_BAR    
+            setLEDScore(bags);               
+          #endif  
+          myScale.tare(20);
+          LED_Status = true;                    
+        }
+      }
     #endif
     // Show bar status;
     #ifdef LED_SCORE_BAR    
