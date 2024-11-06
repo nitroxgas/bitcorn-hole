@@ -1,9 +1,7 @@
-#ifdef LED_SCORE_BAR
-    #if (LED_TEAM_COLOR==1) 
-        const char wmAPNAME[] = "BitcornBoardRED_";
-    #else 
-        const char wmAPNAME[] = "BitcornBoardBLUE_";
-    #endif
+#if (TEAM_COLOR==1) 
+    const char wmAPNAME[] = "BitcornRED_";
+#else 
+    const char wmAPNAME[] = "BitcornBLUE_";
 #endif
 const char wmPASSWD[] = "PlayForSats";
 

@@ -19,8 +19,7 @@ WiFiClient client;
   uint8_t bags = 0;
   bool statusSent = false;
   uint8_t bagsSent = 0;
-  uint8_t assumedBagsSent = 0;
-  unsigned long currentMillis = 0;
+  uint8_t assumedBagsSent = 0;  
 #endif
 
 #ifdef LED_SCORE_BAR
@@ -97,8 +96,7 @@ uint32_t Wheel(byte WheelPos) {
       }
     
     if (score >= 4) {
-      theaterChase(teamColor, 40);   
-      //colorWipe(teamColor, 30); // TeamColor
+      theaterChase(teamColor, 40);         
     }
         
     // Map bags to the LED_SIZE (how many LEDs per bag)
@@ -107,9 +105,9 @@ uint32_t Wheel(byte WheelPos) {
       powerOffLeds();
       for (size_t i = 1; i < scoreLED; i++)
       {
-        strip.setPixelColor(i, teamColor); // Blue Score LEDs
+        strip.setPixelColor(i, teamColor); // Score LEDs
       }          
-      if (LED_Status) {
+      if (LED_Status) { // Status LEDs 0 and LED_SIZE
         strip.setPixelColor(0 , strip.Color(0, 255, 0));
         strip.setPixelColor(LED_SIZE-1, strip.Color(0, 255, 0));
       } else {
@@ -123,7 +121,7 @@ uint32_t Wheel(byte WheelPos) {
       strip.begin();
       strip.show();      
       LED_Status = true;
-      if (LED_TEAM_COLOR) {
+      if (TEAM_COLOR) {
         teamColor=strip.Color(255, 0, 0);
       } else {
         teamColor=strip.Color(0, 0, 255);
@@ -186,8 +184,6 @@ void readSensor(int distances[24]) {
   uint8_t dataPin = 16;
   uint8_t clockPin = 4;
 
-  // uint8_t bagWeight = 200;
-
 void calibrate()
 {
   Serial.println("\n\nCALIBRATION\n===========");
@@ -239,32 +235,110 @@ void calibrate()
   Serial.println("\n\n");
 }
 
+void readBagsFromScale(void * task_id){   
+  unsigned long currentMillis = 0;
+  unsigned int scale_id = (uint32_t)task_id;
+  Serial.printf("[SCALE]  %d  Started scale monitor Task!\n", scale_id);
+
+   while(1) {
+   if (millis() > currentMillis + 500) {
+    currentMillis = millis();    
+      /* float weightSum = 0.0;
+      for (size_t i = 0; i < 10; i++)
+      {
+        weightSum += myScale.get_units(1);
+        delay(5);
+      }      
+      int weight =(int)(weightSum/10); */
+      int weight = (int)myScale.get_units(5);
+      if (weight < -2) {
+        Serial.println("Out of scale recalibrating...");
+        bags = 0;               
+        LED_Status = false;
+        #ifdef LED_SCORE_BAR    
+         setLEDScore(bags);               
+        #endif 
+        myScale.tare(20);  
+        LED_Status = true;
+      } else {
+        int bagsEstimated = (int)((weight / (BAGWEIGHT - TOLERANCE )) + 0.6);          
+        float bagmin = bagsEstimated * BAGWEIGHT - bagsEstimated * TOLERANCE;
+        float bagmax = bagsEstimated * BAGWEIGHT + bagsEstimated * TOLERANCE;        
+        if (weight >= bagmin && weight <= bagmax) {
+          bags = bagsEstimated;          
+        } else {
+          bags = weight / BAGWEIGHT + 0.5;          
+        }
+         Serial.printf("W:%d(%.2f:%.2f) Bags:%d Bags Sent:%d\n", weight, bagmin, bagmax, bags, bagsSent);        
+        // Restart game; bag compartment is empty
+        if ((bags == 0) && (bagsSent>0)) {
+          bagsSent = 0;
+          LED_Status = false;
+          #ifdef LED_SCORE_BAR    
+            setLEDScore(bags);               
+          #endif  
+          Serial.println("Recalibrate for a new game.");
+          myScale.tare(20);
+          LED_Status = true;                    
+        }
+      }    
+    // Show bar status;
+    #ifdef LED_SCORE_BAR    
+      setLEDScore(bags);      
+    #endif
+   }
+  }
+}
+
 void init_loadcells(){
   Serial.println("Starting Load cells.");  
 
   // Slow down ESP to improve accuracy.
- /*  rtc_cpu_freq_config_t config;
-  rtc_clk_cpu_freq_get_config(&config);
-  rtc_clk_cpu_freq_to_config(RTC_CPU_FREQ_80M, &config);
+  /* rtc_cpu_freq_config_t config;
+  rtc_clk_cpu_freq_get_config(&config);  
+  rtc_clk_cpu_freq_to_config(RTC_CPU_FREQ_160M, &config);
   rtc_clk_cpu_freq_set_config_fast(&config); */
 
   myScale.begin(dataPin, clockPin, true);
    
-  // Use to calibrate your load cell comment and update the code after.
+  // Use to calibrate your load cell; comment and update the code after.
   //calibrate();    
-  myScale.set_offset(528485); // Comment to calibrate and update after
-  myScale.set_scale(-21.710976); // Comment to calibrate and update after  
+  // Update offset and scale after call calibrate()
+  // Each scale has to be calibrated
+  #if (TEAM_COLOR==1) 
+    myScale.set_offset(525985); // 4294431298); // Blue
+    myScale.set_scale(-21.563433); // 21.415749);  // Blue
+  #else
+    myScale.set_offset(528485); // Blue A
+    myScale.set_scale(-21.710976); // Blue A 
+  #endif
   myScale.tare(20);
+
+  char *name = (char*) malloc(32);
+  sprintf(name, "(%s)", "scaleMonitor");
+  BaseType_t res1 = xTaskCreatePinnedToCore(readBagsFromScale, "scaleMonitor", 10000, (void*)name, 1, NULL,1);
 }
 
+int cheat = 0;
 void readSensor(int distances[24]) {     
   if (bags == bagsSent) {
-    std::fill(distances, distances+24, 0);    
+    // Send 15 as a value to fill frontend player.baselineValues[].
+    // Bag is detected if the baseline[] - sensorValues[] > threshold (default:6)
+    std::fill(distances, distances+24, 15); 
+    Serial.println("Sending baseline values."); 
+    cheat++;
+    if (cheat>10) {
+      bagsSent++;      
+      cheat=0;
+    }
   } else {
+    bags++;
     std::fill(distances, distances+24, bags);
+    Serial.printf("Sending bean bags information. %d Beans Bags", bags);
     bagsSent = bags;
   }  
 }
+
 #endif
 
 void printWiFiStatus() {
@@ -390,55 +464,5 @@ void loop() {
     }
     delay(1); // Short delay to ensure data is sent
     client.stop();    
-  }
-   #if defined(LOADCELLS) || defined(LED_SCORE_BAR)   
-   if (millis() > currentMillis + 500) {
-    currentMillis = millis();
-    #ifdef LOADCELLS
-      float weightSum = 0.0;
-      for (size_t i = 0; i < 15; i++)
-      {
-        weightSum += myScale.get_units(1);
-        delay(25);
-      }      
-      int weight =(int)(weightSum/15);
-
-      if (weight < -2) {
-        bags = 0;               
-        LED_Status = false;
-        #ifdef LED_SCORE_BAR    
-         setLEDScore(bags);               
-        #endif 
-        myScale.tare(20);  
-        LED_Status = true;
-      } else {
-        int bagsEstimated = (int)((weight / (BAGWEIGHT - TOLERANCE )) + 0.6);
-        // Serial.printf("W:%d Be:%d\n", weight, bagsEstimated);        
-        float bagmin = bagsEstimated * BAGWEIGHT - bagsEstimated * TOLERANCE;
-        float bagmax = bagsEstimated * BAGWEIGHT + bagsEstimated * TOLERANCE;        
-        if (weight >= bagmin && weight <= bagmax) {
-          bags = bagsEstimated;          
-        } else {
-          bags = weight / BAGWEIGHT + 0.5;          
-        }
-        Serial.printf("W:%d(%.2f:%.2f) Bags:%d Bags Sent:%d\n", weight, bagmin, bagmax, bags, bagsSent);
-        
-        // Restart game; bag compartment is empty
-        if ((bags == 0) && (bagsSent>0)) {
-          bagsSent = 0;
-          LED_Status = false;
-          #ifdef LED_SCORE_BAR    
-            setLEDScore(bags);               
-          #endif  
-          myScale.tare(20);
-          LED_Status = true;                    
-        }
-      }
-    #endif
-    // Show bar status;
-    #ifdef LED_SCORE_BAR    
-      setLEDScore(bags);      
-    #endif
-  }
-  #endif
+  }     
 }

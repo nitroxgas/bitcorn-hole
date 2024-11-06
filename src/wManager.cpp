@@ -29,16 +29,22 @@ void init_WifiManager(){
     Serial.println("WIFI Manager starting...");
     wm.setHostname(unicName);    
     res = wm.autoConnect(unicName.c_str(), wmPASSWD); // password protected ap
-    MDNS.begin(unicName);
+    
     if(!res) {        
         Serial.println("Communication with WiFi module failed!");
         ESP.restart();
     } 
     else {
         //if you get here you have connected to the WiFi    
-        Serial.println("connected...yeey :)");        
-        Serial.print("If you network allow mDNS\nYour API endpoint is: http://");
-        Serial.print(unicName+".local");
+        Serial.println("connected...yeey :)");
+        // mDNS 
+        if (MDNS.begin(unicName)){           
+            MDNS.addService("http", "tcp", 80); 
+            Serial.print("If you network allow mDNS\nYour API endpoint is: http://");
+            Serial.print(unicName+".local");
+        } else {
+            Serial.println("mDNS not ok!");
+        }                      
         Serial.println("/readSensor");
         
     }
