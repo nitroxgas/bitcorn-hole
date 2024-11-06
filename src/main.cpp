@@ -319,18 +319,18 @@ void init_loadcells(){
   BaseType_t res1 = xTaskCreatePinnedToCore(readBagsFromScale, "scaleMonitor", 10000, (void*)name, 1, NULL,1);
 }
 
-int cheat = 0;
+ // int cheat = 0;
 void readSensor(int distances[24]) {     
   if (bags == bagsSent) {
     // Send 15 as a value to fill frontend player.baselineValues[].
     // Bag is detected if the baseline[] - sensorValues[] > threshold (default:6)
     std::fill(distances, distances+24, 15); 
     Serial.println("Sending baseline values."); 
-    cheat++;
+    /* cheat++;
     if (cheat>10) {
       bagsSent++;      
       cheat=0;
-    }
+    } */
   } else {
     bags++;
     std::fill(distances, distances+24, bags);
