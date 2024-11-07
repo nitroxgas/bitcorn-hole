@@ -17,9 +17,6 @@ WiFiServer server(80);
 WiFiClient client;
 #if defined(LOADCELLS) || defined(LED_SCORE_BAR)
 uint8_t bags = 0;
-bool statusSent = false;
-uint8_t bagsSent = 0;
-uint8_t assumedBagsSent = 0;
 bool shouldTare = false;
 #endif
 
@@ -99,20 +96,6 @@ void colorWipe(uint32_t c, uint8_t wait)
 
 void setLEDScore(int score)
 {
-
-  if (score > bagsSent)
-  {
-    if (assumedBagsSent <= 5)
-    {
-      theaterChase(strip.Color(50, 255, 0), 20);
-      assumedBagsSent++;
-    }
-  }
-  else
-  {
-    assumedBagsSent = 0;
-  }
-
   if (score >= 4)
   {
     theaterChase(teamColor, 40);
@@ -323,13 +306,7 @@ void readBagsFromScale(void *task_id)
         {
           bags = weight / BAGWEIGHT + 0.5;
         }
-        Serial.printf("W:%d(%.2f:%.2f) Bags:%d Bags Sent:%d\n", weight, bagmin, bagmax, bags, bagsSent);
-        // Restart game; bag compartment is empty
-        if ((bags == 0) && (bagsSent > 0))
-        {
-          Serial.println("Recalibrate for a new game.");
-          recalibrateScale();
-        }
+        Serial.printf("W:%d(%.2f:%.2f) Bags:%d\n", weight, bagmin, bagmax, bags);
       }
 // Show bar status;
 #ifdef LED_SCORE_BAR
@@ -372,24 +349,8 @@ void init_loadcells()
 // int cheat = 0;
 void readSensor(int distances[24])
 {
-  if (bags == bagsSent)
-  {
-    // Send 15 as a value to fill frontend player.baselineValues[].
-    // Bag is detected if the baseline[] - sensorValues[] > threshold (default:6)
-    std::fill(distances, distances + 24, 15);
-    Serial.println("Sending baseline values.");
-    /* cheat++;
-    if (cheat>10) {
-      bagsSent++;
-      cheat=0;
-    } */
-  }
-  else
-  {
-    std::fill(distances, distances + 24, bags);
-    Serial.printf("Sending bean bags information. %d Beans Bags", bags);
-    bagsSent = bags;
-  }
+  std::fill(distances, distances + 24, bags);
+  Serial.printf("Sending bean bags information. %d Beans Bags", bags);
 }
 
 #endif
@@ -515,23 +476,22 @@ void loop()
 #endif
         }
 
+        if (currentLine.endsWith("GET /resetScale"))
+        {
+          Serial.println("Received /resetScale request.");
+          shouldTare = true;
+          printHeaders();
+          client.println("{\"message\":\"ok\"}");
+        }
+
         if (currentLine.endsWith("GET /readSensor"))
         {
           Serial.println("Received request.");
           printHeaders();
-          readSensor(distances);
 
-          client.print("[");
-          for (int i = 0; i < 24; i++)
-          {
-            client.print(distances[i]);
-
-            if (i < 23)
-            {
-              client.print(",");
-            }
-          }
-          client.print("]");
+          client.print("[\"scale\",");
+          client.print(bags);
+          client.println("]");
         }
       }
     }
