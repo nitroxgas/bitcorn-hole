@@ -327,14 +327,8 @@ void readBagsFromScale(void *task_id)
         // Restart game; bag compartment is empty
         if ((bags == 0) && (bagsSent > 0))
         {
-          bagsSent = 0;
-          LED_Status = false;
-#ifdef LED_SCORE_BAR
-          setLEDScore(bags);
-#endif
           Serial.println("Recalibrate for a new game.");
-          myScale.tare(20);
-          LED_Status = true;
+          recalibrateScale();
         }
       }
 // Show bar status;
@@ -357,16 +351,16 @@ void init_loadcells()
 
   myScale.begin(dataPin, clockPin, true);
 
-// Use to calibrate your load cell; comment and update the code after.
-// calibrate();
+  // Use to calibrate your load cell; comment and update the code after.
+  // calibrate();
 // Update offset and scale after call calibrate()
 // Each scale has to be calibrated
 #if (TEAM_COLOR == 1)
-  myScale.set_offset(525679);    // 4294431298); // Blue
-  myScale.set_scale(-23.592560); // 21.415749);  // Blue
+  myScale.set_offset(525338);    // Red
+  myScale.set_scale(-21.905506); // Red
 #else
-  myScale.set_offset(537889);    // Blue A
-  myScale.set_scale(-21.596563); // Blue A
+  myScale.set_offset(537889);    // Blue
+  myScale.set_scale(-21.596563); // Blue
 #endif
   myScale.tare(20);
 
