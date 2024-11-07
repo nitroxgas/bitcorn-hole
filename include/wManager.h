@@ -6,3 +6,4 @@
 const char wmPASSWD[] = "PlayForSats";
 
 void init_WifiManager();
+void wifiManagerProcess();
