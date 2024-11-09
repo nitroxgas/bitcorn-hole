@@ -329,15 +329,17 @@ void init_loadcells()
   myScale.begin(dataPin, clockPin, true);
 
   // Use to calibrate your load cell; comment and update the code after.
+  // myScale.set_offset(0);
+  // myScale.set_scale(1);
   // calibrate();
 // Update offset and scale after call calibrate()
 // Each scale has to be calibrated
 #if (TEAM_COLOR == 1)
-  myScale.set_offset(525338);    // Red
-  myScale.set_scale(-21.905506); // Red
+  myScale.set_offset(524194);    // Red
+  myScale.set_scale(-22.610714); // Red
 #else
-  myScale.set_offset(537889);    // Blue
-  myScale.set_scale(-21.596563); // Blue
+  myScale.set_offset(537626);    // Blue
+  myScale.set_scale(-26.407440); // Blue
 #endif
   myScale.tare(20);
 
