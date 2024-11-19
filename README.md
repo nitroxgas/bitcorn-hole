@@ -51,15 +51,16 @@ There are three main code files in this repository:
 2. **Microcontroller Code**: This code runs on each microcontroller, hosting a web server and interfacing with the sensors to detect when a bean bag is present.  
    [View ToF Microcontroller Code - Arduino IDE](https://github.com/nitroxgas/bitcorn-hole/blob/main/src/microcontroller_webserver_with_tof/microcontroller_webserver_with_tof.ino)
    To build a set with scales to detect more than one bag, without have to collect them each time one scores. You must install VSCode and at VSCode extensions (Ctrl+Shift+X), you must install PlatformIO IDE.
-   Clone this repo, and configure the platformio.ini tho match your configurations:
-   build_flags = 
-     -DESP32_DEV=1 ; To use a ESP32 board
-	   -DLOADCELLS=1 ; Uses a weigth scale
-	   -DBAGWEIGHT=200 ; bag weight in grams
-	   -DTOLERANCE=25 ; weight tolerance in grams
-	   -DLED_SCORE_BAR=19 ; GPIO pin for LED score bar *Comment this line with a ; if you do not have a LED Bar*
-	   -DLED_SIZE=10 ; number of LEDs in the score bar
-	   -DTEAM_COLOR=1 ; 1 = Red 0 = Blue - You must change this and compile to install the different player version in the microcontrollers
+   Clone this repo, and configure the platformio.ini to match your configurations:
+   
+   build_flags =
+      	   -DESP32_DEV=1 ; To use a ESP32 board
+   	   -DLOADCELLS=1 ; Uses a weigth scale
+   	   -DBAGWEIGHT=200 ; bag weight in grams
+   	   -DTOLERANCE=25 ; weight tolerance in grams
+   	   -DLED_SCORE_BAR=19 ; GPIO pin for LED score bar *Comment this line with a ; if you do not have a LED Bar*
+   	   -DLED_SIZE=10 ; number of LEDs in the score bar
+   	   -DTEAM_COLOR=1 ; 1 = Red 0 = Blue - You must change this and compile to install the different player version in the microcontrollers
    
 
 5. **API to Pay Sats**: This handles the instant payments to players' Lightning Addresses. You can substitute your own API endpoint, and either run your own LND node or use a custodial API like ZBD.  
