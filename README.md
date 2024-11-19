@@ -35,7 +35,7 @@ Set with scales, or load cell sensor:
 - [DIY enclosures](ENCLOSURES.md) —
   These are placed under each cornhole board to house the sensors and detect bean bags
 - A computer with a screen and speakers to run the game
-- Optional, but a great addition - LED Bars to display the points in front of the set:
+Optional, but a great addition - LED Bars to display the points in front of the set:
 - [10 LEDs per set - Individually Addressable LED strip - WS2812b 5v 30/m](https://s.click.aliexpress.com/e/_msIFqu7) - 3 wires - 5v, Data and GND
 - [LED bar Aluminum Channels - 50 or 30cm V Style](https://s.click.aliexpress.com/e/_mLCfd0P)
 - Old usb cables to connect the LED bar to the microcontroller.
