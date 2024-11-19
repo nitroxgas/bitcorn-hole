@@ -1,8 +1,10 @@
+#ifndef ARDUINO_UNOWIFIR4 // WiFiManager can't deal with the R4 for now.
 #include "wManager.h"
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
 
 WiFiManager wm;
+
 void init_WifiManager()
 {
     // WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
@@ -76,3 +78,4 @@ void wifiManagerProcess()
         oldStatus = newStatus;
     }
 }
+#endif // R4 compatibility

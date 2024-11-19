@@ -1,3 +1,4 @@
+#ifndef ARDUINO_UNOWIFIR4
 #if (TEAM_COLOR==1) 
     const char wmAPNAME[] = "BitcornRED_";
 #else 
@@ -7,3 +8,4 @@ const char wmPASSWD[] = "PlayForSats";
 
 void init_WifiManager();
 void wifiManagerProcess();
+#endif

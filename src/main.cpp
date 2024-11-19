@@ -1,10 +1,10 @@
 #ifdef ARDUINO_UNOWIFIR4 // If using UNO WiFi R4 change the WiFi lib (better compatibility)
 #include "WiFiS3.h"
+#include <Wire.h>
 #else
 #include "WiFi.h"
-#endif
-#include <Wire.h>
 #include "wManager.h"
+#endif
 
 // If not ESP32-S3 define LED pin.
 #ifndef LED_BUILTIN
@@ -13,8 +13,10 @@
 
 int led = LED_BUILTIN;
 int status = WL_IDLE_STATUS;
+
 WiFiServer server(80);
 WiFiClient client;
+
 #if defined(LOADCELLS) || defined(LED_SCORE_BAR)
 uint8_t bags = 0;
 bool shouldTare = false;
@@ -143,8 +145,41 @@ void init_LEDS()
 #ifdef VL53L5CX
 #include <SparkFun_VL53L5CX_Library.h>
 SparkFun_VL53L5CX mySensor;
-void init_VL53L5CX()
-{
+
+// WiFi credentials - update these!
+char ssid[] = "Your network name";
+char pass[] = "Your network password";
+
+void init_wifi(){
+
+ // Check for the WiFi module
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println("Communication with WiFi module failed!");
+    while (true); // Halt the program if WiFi module is not found
+  }
+
+  // Attempt to connect to the WiFi network
+  while (status != WL_CONNECTED) {
+    Serial.print("Connecting to SSID: ");
+    Serial.println(ssid);
+    status = WiFi.begin(ssid, pass);  
+    delay(10000); // Wait 10 seconds for connection
+  }
+}
+
+void wifiManagerProcess(){
+  // Monitor WiFi status changes
+  if (status != WiFi.status()) {
+    status = WiFi.status();
+    if (status == WL_AP_CONNECTED) {
+      Serial.println("Device connected to AP");
+    } else {
+      Serial.println("Device disconnected from AP");
+    }
+  }
+}
+
+void init_VL53L5CX(){
   // Initialize I2C communication
   Wire.begin();  // Initialize default I2C bus (Wire) - Used for soldered connections; I am not using this
   Wire1.begin(); // Initialize second I2C bus (Wire1) - Needed for Arduino Uno R4 with Qwicc cables
@@ -164,6 +199,8 @@ void init_VL53L5CX()
 
   mySensor.setResolution(8 * 8); // Set the sensor resolution to 8x8
   mySensor.startRanging();       // Start measuring distance
+
+  init_wifi();
 }
 
 void readSensor(int distances[24])
@@ -389,12 +426,14 @@ void setup()
 #endif
 
 #ifdef LOADCELLS
-  init_loadcells();
+  init_loadcells();  
 #endif
 
-  pinMode(led, OUTPUT);
-
+#ifndef ARDUINO_UNOWIFIR4
   init_WifiManager();
+#endif
+
+  pinMode(led, OUTPUT);  
 
   // Start the web server on port 80
   server.begin();
@@ -407,16 +446,15 @@ void setup()
 
 void loop()
 {
-
+  wifiManagerProcess();
+  
   // Listen for incoming clients
   client = server.available();
   unsigned long clientConnectedTime = millis();
-  int distances[24] = {0};
-
+  
   if (client)
   {
-    String currentLine = ""; // Make a String to hold incoming data from the client
-    wifiManagerProcess();
+    String currentLine = ""; // Make a String to hold incoming data from the client    
 
     while (client.connected())
     { // Loop while the client's connected
@@ -477,7 +515,7 @@ void loop()
           LED_Status = false;
 #endif
         }
-
+#ifdef LOADCELLS
         if (currentLine.endsWith("GET /resetScale"))
         {
           Serial.println("Received /resetScale request.");
@@ -490,11 +528,27 @@ void loop()
         {
           Serial.println("Received request.");
           printHeaders();
-
           client.print("[\"scale\",");
           client.print(bags);
           client.println("]");
         }
+#elif defined(VL53L5CX)
+         if (currentLine.endsWith("GET /readSensor")) {
+          printHeaders(); 
+          int distances[24] = {0};
+          readSensor(distances); 
+
+          client.print("[");
+          for (int i = 0; i < 24; i++) {
+            client.print(distances[i]); 
+
+            if (i < 23) { 
+              client.print(",");
+            }
+          }
+          client.print("]");
+        }
+#endif        
       }
     }
 
