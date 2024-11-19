@@ -293,12 +293,14 @@ void calibrate()
 void recalibrateScale()
 {
   bags = 0;
-  LED_Status = false;
 #ifdef LED_SCORE_BAR
+  LED_Status = false;
   setLEDScore(bags);
 #endif
   myScale.tare(20);
+#ifdef LED_SCORE_BAR
   LED_Status = true;
+#endif
 }
 
 void readBagsFromScale(void *task_id)
