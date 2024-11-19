@@ -28,6 +28,7 @@ bool LED_Status = false;
 // LED Data pin from LED_SCORE_BAR platormio.ini definition
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_SIZE, LED_SCORE_BAR, NEO_GRB + NEO_KHZ800);
 uint32_t teamColor = 0;
+uint8_t bagsShow = 5;
 
 void powerOffLeds()
 {
@@ -304,8 +305,7 @@ void readBagsFromScale(void *task_id)
 {
   unsigned long currentMillis = 0;
   unsigned int scale_id = (uint32_t)task_id;
-  Serial.printf("[SCALE]  %d  Started scale monitor Task!\n", scale_id);
-
+  Serial.printf("[SCALE]  %d  Started scale monitor Task!\n", scale_id);                                       
   while (1)
   {
     if (millis() > currentMillis + 500)
@@ -343,11 +343,14 @@ void readBagsFromScale(void *task_id)
         {
           bags = weight / BAGWEIGHT + 0.5;
         }
-        Serial.printf("W:%d(%.2f:%.2f) Bags:%d\n", weight, bagmin, bagmax, bags);
+        Serial.printf("W:%d T:(>%.0f <%.0f) Bags:%d\n", weight, bagmin, bagmax, bags);
       }
 // Show bar status;
 #ifdef LED_SCORE_BAR
+  if (bagsShow != bags) {
       setLEDScore(bags);
+      bagsShow = bags;
+  }
 #endif
     }
   }
@@ -368,12 +371,13 @@ void init_loadcells()
   // Use to calibrate your load cell; comment and update the code after.
   // myScale.set_offset(0);
   // myScale.set_scale(1);
-  // calibrate();
+//calibrate();
+
 // Update offset and scale after call calibrate()
 // Each scale has to be calibrated
 #if (TEAM_COLOR == 1)
-  myScale.set_offset(524194);    // Red
-  myScale.set_scale(-22.610714); // Red
+  myScale.set_offset(4294942262);    // Red
+  myScale.set_scale(340.153290); // Red
 #else
   myScale.set_offset(537626);    // Blue
   myScale.set_scale(-26.407440); // Blue
@@ -385,14 +389,13 @@ void init_loadcells()
   BaseType_t res1 = xTaskCreatePinnedToCore(readBagsFromScale, "scaleMonitor", 10000, (void *)name, 1, NULL, 1);
 }
 
-// int cheat = 0;
 void readSensor(int distances[24])
 {
   std::fill(distances, distances + 24, bags);
   Serial.printf("Sending bean bags information. %d Beans Bags", bags);
 }
 
-#endif
+#endif // Load cells
 
 void printWiFiStatus()
 {
@@ -420,9 +423,15 @@ void setup()
   }
   Serial.println("********* Starting Program ********* ");
 
+  pinMode(led, OUTPUT);  
+
 // Start LIDAR
 #ifdef VL53L5CX
   init_VL53L5CX();
+#endif
+
+#ifdef LED_SCORE_BAR
+  init_LEDS();
 #endif
 
 #ifdef LOADCELLS
@@ -431,17 +440,11 @@ void setup()
 
 #ifndef ARDUINO_UNOWIFIR4
   init_WifiManager();
-#endif
-
-  pinMode(led, OUTPUT);  
+#endif  
 
   // Start the web server on port 80
   server.begin();
   printWiFiStatus();
-
-#ifdef LED_SCORE_BAR
-  init_LEDS();
-#endif
 }
 
 void loop()
