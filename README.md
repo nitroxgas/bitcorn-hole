@@ -2,7 +2,7 @@
 
 # Bitcorn Hole 🌽🕳️
 
-**Bitcorn Hole** is a physical hardware game where players earn bitcoin every time they score a point! Bean bags are tossed into the cornhole set and detected using microcontrollers with time-of-flight sensors. Each point scored triggers an **instant** payment of sats to the player’s Lightning Address! ⚡
+**Bitcorn Hole** is a physical hardware game where players earn bitcoin every time they score a point! Bean bags are tossed into the cornhole set and detected using microcontrollers with time-of-flight sensors or load cells(a scale). Each point scored triggers an **instant** payment of sats to the player’s Lightning Address! ⚡
 
 ## Live Demo
 See how the game works in action [here](https://x.com/D_plus__plus/status/1807889900093821104) and [here](https://x.com/D_plus__plus/status/1845504750739218734).
@@ -11,6 +11,7 @@ See how the game works in action [here](https://x.com/D_plus__plus/status/180788
 
 To build your own Bitcorn Hole setup, you’ll need the following:
 
+Set with a ToF sensor:
 - [Cornhole set](https://www.amazon.com/dp/B07S1PYYTV) — comes with two boards
 - 2x [Wifi-enabled microcontrollers](https://www.amazon.com/dp/B0C8V88Z9D) —
   I used the Arduino Uno R4, but you could refactor the code to work with ESP32
@@ -22,6 +23,23 @@ To build your own Bitcorn Hole setup, you’ll need the following:
 - A computer with a screen and speakers to run the game
 
 Massive thanks to [Dani Go](https://www.youtube.com/@bitcoineando) for her soldering help!
+
+Set with scales, or load cell sensor:
+- [Cornhole set](https://www.amazon.com/dp/B07S1PYYTV) — comes with two boards
+- 2x [Wifi-enabled microcontrollers]([https://www.amazon.com/dp/B0C8V88Z9D](https://pt.aliexpress.com/item/1005006389637966.html?channel=twinner)) —
+  I used the ESP32 38PINS Board with an expansion board.
+- 2x [Load cells sensors with HX711 module, 10kg](https://a.co/d/5bQHzve](https://s.click.aliexpress.com/e/_m0FvR6F).
+- Or 2x [Kitchen Scales (sensor 5-10kg, you could use the plastic structure)](https://s.click.aliexpress.com/e/_m00y0y3) with 2x [HX711 Modules](https://s.click.aliexpress.com/e/_mNYNK8j)
+- [Jumper wires (buy some female-female and female-male)](https://www.amazon.com/California-JOS-Breadboard-Optional-Multicolored/dp/B0BRTJQZRD) and USB-C cables
+- [Battery packs](https://www.amazon.com/gp/product/B08LH26PFT) or AC adapters
+- [DIY enclosures](ENCLOSURES.md) —
+  These are placed under each cornhole board to house the sensors and detect bean bags
+- A computer with a screen and speakers to run the game
+- Optional, but a great addition - LED Bars to display the points in front of the set:
+- [10 LEDs per set - Individually Addressable LED strip - WS2812b 5v 30/m](https://s.click.aliexpress.com/e/_msIFqu7) - 3 wires - 5v, Data and GND
+- [LED bar Aluminum Channels - 50 or 30cm V Style](https://s.click.aliexpress.com/e/_mLCfd0P)
+- Old usb cables to connect the LED bar to the microcontroller.
+  
 
 ## Code and Setup
 
