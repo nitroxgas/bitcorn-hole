@@ -60,7 +60,7 @@ build_flags =
 -DLED_SCORE_BAR=19 ; GPIO pin for LED score bar *Comment this line with a ; if you do not have a LED Bar*
 -DLED_SIZE=10 ; number of LEDs in the score bar
 -DTEAM_COLOR=1 ; 1 = Red 0 = Blue - You must change this and compile to install the different player version in the microcontrollers
-   
+  
 
 5. **API to Pay Sats**: This handles the instant payments to players' Lightning Addresses. You can substitute your own API endpoint, and either run your own LND node or use a custodial API like ZBD.  
    [API Code - Coming Soon](#link-to-api-code)
