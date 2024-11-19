@@ -26,7 +26,7 @@ Massive thanks to [Dani Go](https://www.youtube.com/@bitcoineando) for her solde
 
 Set with scales, or load cell sensor:
 - [Cornhole set](https://www.amazon.com/dp/B07S1PYYTV) — comes with two boards
-- 2x [Wifi-enabled microcontrollers]([https://www.amazon.com/dp/B0C8V88Z9D](https://pt.aliexpress.com/item/1005006389637966.html?channel=twinner)) —
+- 2x [Wifi-enabled microcontrollers](https://pt.aliexpress.com/item/1005006389637966.html?channel=twinner) —
   I used the ESP32 38PINS Board with an expansion board.
 - 2x [Load cells sensors with HX711 module, 10kg](https://a.co/d/5bQHzve](https://s.click.aliexpress.com/e/_m0FvR6F).
 - Or 2x [Kitchen Scales (sensor 5-10kg, you could use the plastic structure)](https://s.click.aliexpress.com/e/_m00y0y3) with 2x [HX711 Modules](https://s.click.aliexpress.com/e/_mNYNK8j)
